@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/evgeniron/API-Validator/store"
 )
 
 func main() {
@@ -14,6 +16,10 @@ func main() {
 }
 
 func run() error {
-	http.ListenAndServe(":5000", newServer())
-	return nil
+	db, err := store.NewDB()
+	if err != nil {
+		return err
+	}
+	srv := NewServer(db)
+	return http.ListenAndServe(":5000", srv)
 }
