@@ -8,7 +8,7 @@ import (
 )
 
 func TestStore(t *testing.T) {
-	db, err := NewDB()
+	db, err := NewInMemoryDB()
 	require.NoError(t, err)
 
 	err = db.Insert("test", &model.Endpoint{Path: "path/test"})

@@ -1,8 +1,6 @@
 package store
 
 import (
-	"fmt"
-
 	"github.com/evgeniron/API-Validator/model"
 )
 
@@ -12,7 +10,7 @@ type Store struct {
 	db inMemory
 }
 
-func NewDB() (*Store, error) {
+func NewInMemoryDB() (*Store, error) {
 	db := make(inMemory, 0)
 	return &Store{db: db}, nil
 }
@@ -25,7 +23,7 @@ func (s *Store) Insert(key string, model *model.Endpoint) error {
 func (s *Store) Get(key string) (*model.Endpoint, error) {
 	record, ok := s.db[key]
 	if !ok {
-		return nil, fmt.Errorf("record not found: %s", key)
+		return nil, &RecordNotFoundError{Key: key}
 	}
 	return &record, nil
 }
