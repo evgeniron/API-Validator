@@ -8,6 +8,12 @@ import (
 	"github.com/evgeniron/API-Validator/utils"
 )
 
+const (
+	ErrMismatchType         = "value type mismatch"
+	ErrMissingRequiredField = "missing required field"
+	ErrUnrecognizedField    = "unrecognized field"
+)
+
 type Field struct {
 	Name  string
 	Value interface{}
@@ -21,12 +27,18 @@ type Endpoint struct {
 	Body        []Field `json:"body"`
 }
 
+type ValidationError struct {
+	FieldName  string
+	ErrorType  string
+	ErrorValue interface{}
+}
+
 type ValidationReport struct {
 	Path        string
 	Method      string
-	QueryParams []error
-	Headers     []error
-	Body        []error
+	QueryParams []ValidationError
+	Headers     []ValidationError
+	Body        []ValidationError
 }
 
 func NewValidationReport() *ValidationReport {
@@ -51,7 +63,7 @@ func (vr *ValidationReport) WithMethod(method string) *ValidationReport {
 	return vr
 }
 
-func (vr *ValidationReport) WithQueryParams(queryParams []error) *ValidationReport {
+func (vr *ValidationReport) WithQueryParams(queryParams []ValidationError) *ValidationReport {
 	if vr == nil {
 		return nil
 	}
@@ -60,7 +72,7 @@ func (vr *ValidationReport) WithQueryParams(queryParams []error) *ValidationRepo
 	return vr
 }
 
-func (vr *ValidationReport) WithHeaders(headers []error) *ValidationReport {
+func (vr *ValidationReport) WithHeaders(headers []ValidationError) *ValidationReport {
 	if vr == nil {
 		return nil
 	}
@@ -69,7 +81,7 @@ func (vr *ValidationReport) WithHeaders(headers []error) *ValidationReport {
 	return vr
 }
 
-func (vr *ValidationReport) WithBody(body []error) *ValidationReport {
+func (vr *ValidationReport) WithBody(body []ValidationError) *ValidationReport {
 	if vr == nil {
 		return nil
 	}
@@ -103,38 +115,39 @@ func ValidateReport(endpoint *Endpoint, model *model.EndpointModel) (*Validation
 	return validationReport, nil
 }
 
-func validateFields(inputFields []Field, expectedFieldModels map[string]model.FieldModel) []error {
-	var validationErrors []error
-
-	existingFields := make(map[string]struct{})
-	for _, inputField := range inputFields {
-		existingFields[inputField.Name] = struct{}{}
-
-		expectedFieldModel, fieldModelExists := expectedFieldModels[inputField.Name]
-		if !fieldModelExists {
-			validationErrors = append(validationErrors, fmt.Errorf("unrecognized field: %s", inputField.Name))
+func validateFieldType(inputField Field, types []string) []ValidationError {
+	var validationErrors []ValidationError
+	for _, filterType := range types {
+		validatorFunc, validatorExists := Validators[filterType]
+		if !validatorExists {
+			// log error here
 			continue
 		}
 
-		for _, filterType := range expectedFieldModel.Types {
-			validatorFunc, validatorExists := Validators[filterType]
-			if !validatorExists {
-				validationErrors = append(validationErrors, fmt.Errorf("validator missing for type: %s", filterType))
-				continue
-			}
-
-			if !validatorFunc(inputField.Value) {
-				validationErrors = append(validationErrors, fmt.Errorf("value type mismatch for field: %s, expected: %s", inputField.Name, filterType))
-			}
+		if !validatorFunc(inputField.Value) {
+			validationErrors = append(validationErrors, ValidationError{inputField.Name, ErrMismatchType, filterType})
 		}
 	}
 
-	validationErrors = append(validationErrors, validateRequiredFields(expectedFieldModels, existingFields)...)
 	return validationErrors
 }
 
-func validateRequiredFields(expectedFieldModels map[string]model.FieldModel, existingFields map[string]struct{}) []error {
-	var validationErrors []error
+func validateField(inputField Field, expectedFieldModels map[string]model.FieldModel) []ValidationError {
+	var validationErrors []ValidationError
+
+	expectedFieldModel, fieldModelExists := expectedFieldModels[inputField.Name]
+	if !fieldModelExists {
+		validationErrors = append(validationErrors, ValidationError{inputField.Name, ErrUnrecognizedField, nil})
+		return validationErrors
+	}
+
+	validationErrors = append(validationErrors, validateFieldType(inputField, expectedFieldModel.Types)...)
+
+	return validationErrors
+}
+
+func validateRequiredFields(expectedFieldModels map[string]model.FieldModel, existingFields map[string]struct{}) []ValidationError {
+	var validationErrors []ValidationError
 	for fieldName, fieldModel := range expectedFieldModels {
 		if !fieldModel.Requried {
 			continue
@@ -142,8 +155,21 @@ func validateRequiredFields(expectedFieldModels map[string]model.FieldModel, exi
 
 		_, fieldExists := existingFields[fieldName]
 		if !fieldExists {
-			validationErrors = append(validationErrors, fmt.Errorf("required field missing: %s", fieldName))
+			validationErrors = append(validationErrors, ValidationError{fieldName, ErrMissingRequiredField, nil})
 		}
 	}
+	return validationErrors
+}
+
+func validateFields(inputFields []Field, expectedFieldModels map[string]model.FieldModel) []ValidationError {
+	var validationErrors []ValidationError
+
+	existingFields := make(map[string]struct{}, len(inputFields))
+	for _, inputField := range inputFields {
+		existingFields[inputField.Name] = struct{}{}
+		validationErrors = append(validationErrors, validateField(inputField, expectedFieldModels)...)
+	}
+
+	validationErrors = append(validationErrors, validateRequiredFields(expectedFieldModels, existingFields)...)
 	return validationErrors
 }
