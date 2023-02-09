@@ -30,7 +30,7 @@ func TestStoreModels(t *testing.T) {
 			models, err := Decode(r)
 			require.NoError(t, err)
 
-			require.Equal(t, 4, len(models))
+			require.Equal(t, 5, len(models))
 			require.Equal(t, "UUID", models[0].QueryParams[1].Types[1])
 		})
 	}
