@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 
 	"github.com/evgeniron/API-Validator/model"
 	"github.com/evgeniron/API-Validator/store"
+	"github.com/evgeniron/API-Validator/validate"
 	"github.com/gorilla/mux"
 )
 
@@ -31,7 +33,28 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) ValidateAPI() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		endpoint, err := validate.ParseEndpoint(r)
+		if err != nil {
+			respond(w, r, http.StatusBadRequest, err.Error())
+		}
 
+		model, err := model.GetModel(s.db, endpoint.Path, endpoint.Method)
+		if err != nil {
+			var e *store.RecordNotFoundError
+			if errors.As(err, e) {
+				// we can add metrics/logs here for records not found
+				respond(w, r, http.StatusOK, nil)
+				return
+			}
+		}
+
+		report, err := validate.ValidateReport(endpoint, model)
+		if err != nil {
+			// we can add metrics/logs/traces here for errors validating record
+			respond(w, r, http.StatusOK, nil)
+			return
+		}
+		respond(w, r, http.StatusOK, report)
 	}
 }
 

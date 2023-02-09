@@ -16,7 +16,7 @@ func main() {
 }
 
 func run() error {
-	db, err := store.NewDB()
+	db, err := store.NewInMemoryDB()
 	if err != nil {
 		return err
 	}
