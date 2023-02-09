@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/evgeniron/API-Validator/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,5 +34,50 @@ func TestStoreModels(t *testing.T) {
 			require.Equal(t, 5, len(models))
 			require.Equal(t, "UUID", models[0].QueryParams[1].Types[1])
 		})
+	}
+}
+
+func TestGetModel(t *testing.T) {
+	tests := []struct {
+		data        *EndpointModel
+		expectedErr bool
+	}{
+		{
+			data: &EndpointModel{
+				"path",
+				"POST",
+				map[string]FieldModel{
+					"testing1": {
+						[]string{"1", "2"},
+						true,
+					},
+				},
+				map[string]FieldModel{
+					"testing2": {
+						[]string{"3", "4"},
+						true,
+					},
+				},
+				map[string]FieldModel{
+					"testing3": {
+						[]string{"5", "6"},
+						true,
+					},
+				},
+			},
+			expectedErr: false,
+		},
+	}
+	for _, tt := range tests {
+		db, err := store.NewInMemoryDB()
+		require.NoError(t, err)
+		key := generateKey(tt.data.Path, tt.data.Method)
+		err = db.Insert(key, tt.data)
+		require.NoError(t, err)
+
+		result, err := GetModel(db, tt.data.Path, tt.data.Method)
+		require.NoError(t, err)
+
+		require.Equal(t, tt.data, result)
 	}
 }

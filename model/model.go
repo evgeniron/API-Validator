@@ -8,8 +8,8 @@ import (
 )
 
 type Store interface {
-	Insert(key string, model *Endpoint) error
-	Get(model string) (*Endpoint, error)
+	Insert(key string, model interface{}) error
+	Get(model string) (interface{}, error)
 }
 type Field struct {
 	Name     string   `json:"name"`
@@ -65,7 +65,15 @@ func generateKey(path, method string) string {
 
 func StoreModel(db Store, model *Endpoint) error {
 	key := generateKey(model.Path, model.Method)
-	return db.Insert(key, model)
+
+	endpointModel := NewModel().
+		WithPath(model.Path).
+		WithMethod(model.Method).
+		WithQueryParams(model.QueryParams).
+		WithHeaders(model.Headers).
+		WithBody(model.Body)
+
+	return db.Insert(key, endpointModel)
 }
 
 func NewModel() *EndpointModel {
@@ -119,17 +127,15 @@ func (em *EndpointModel) WithBody(body []Field) *EndpointModel {
 
 func GetModel(db Store, path, method string) (*EndpointModel, error) {
 	key := generateKey(path, method)
-	model, err := db.Get(key)
+	record, err := db.Get(key)
 	if err != nil {
 		return nil, err
 	}
 
-	endpointModel := NewModel().
-		WithPath(model.Path).
-		WithMethod(model.Method).
-		WithQueryParams(model.QueryParams).
-		WithHeaders(model.Headers).
-		WithBody(model.Body)
+	endpointModel, ok := record.(*EndpointModel)
+	if !ok {
+		return nil, fmt.Errorf("incorrect type - expecting EndpointModel type")
+	}
 
 	return endpointModel, nil
 }
