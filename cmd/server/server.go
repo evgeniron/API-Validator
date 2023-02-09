@@ -31,29 +31,36 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-func (s *Server) ValidateAPI() http.HandlerFunc {
+func (s *Server) ValidateEndpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Parse request
 		endpoint, err := validate.ParseEndpoint(r)
 		if err != nil {
 			respond(w, r, http.StatusBadRequest, err.Error())
 		}
 
+		// Load model
 		model, err := model.GetModel(s.db, endpoint.Path, endpoint.Method)
 		if err != nil {
 			var e *store.RecordNotFoundError
-			if errors.As(err, e) {
+			if errors.As(err, &e) {
 				// we can add metrics/logs here for records not found
 				respond(w, r, http.StatusOK, nil)
 				return
 			}
+			respond(w, r, http.StatusInternalServerError, nil)
 		}
 
+		// Validate endpoint
 		report, err := validate.ValidateReport(endpoint, model)
 		if err != nil {
 			// we can add metrics/logs/traces here for errors validating record
 			respond(w, r, http.StatusOK, nil)
 			return
 		}
+
+		// Write response
 		respond(w, r, http.StatusOK, report)
 	}
 }
