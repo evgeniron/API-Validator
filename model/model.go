@@ -27,7 +27,7 @@ type Endpoint struct {
 
 type FieldModel struct {
 	Types    []string
-	Requried bool
+	Required bool
 }
 
 type EndpointModel struct {
@@ -147,7 +147,7 @@ func rawFeildToFieldModel(fields []Field) map[string]FieldModel {
 		copy(types, field.Types)
 		fieldModel[field.Name] = FieldModel{
 			Types:    field.Types,
-			Requried: field.Required,
+			Required: field.Required,
 		}
 	}
 	return fieldModel
