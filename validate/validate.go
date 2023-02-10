@@ -28,9 +28,10 @@ type Endpoint struct {
 }
 
 type ValidationError struct {
-	FieldName  string
-	ErrorType  string
-	ErrorValue interface{}
+	FieldName    string
+	ErrorType    string
+	ExpectedType string
+	ErrorValue   interface{}
 }
 
 type ValidationReport struct {
@@ -125,7 +126,7 @@ func validateFieldType(inputField Field, types []string) []ValidationError {
 		}
 
 		if !validatorFunc(inputField.Value) {
-			validationErrors = append(validationErrors, ValidationError{inputField.Name, ErrMismatchType, filterType})
+			validationErrors = append(validationErrors, ValidationError{inputField.Name, ErrMismatchType, filterType, inputField.Value})
 		}
 	}
 
@@ -137,7 +138,7 @@ func validateField(inputField Field, expectedFieldModels map[string]model.FieldM
 
 	expectedFieldModel, fieldModelExists := expectedFieldModels[inputField.Name]
 	if !fieldModelExists {
-		validationErrors = append(validationErrors, ValidationError{inputField.Name, ErrUnrecognizedField, nil})
+		validationErrors = append(validationErrors, ValidationError{inputField.Name, ErrUnrecognizedField, "", nil})
 		return validationErrors
 	}
 
@@ -149,13 +150,13 @@ func validateField(inputField Field, expectedFieldModels map[string]model.FieldM
 func validateRequiredFields(expectedFieldModels map[string]model.FieldModel, existingFields map[string]struct{}) []ValidationError {
 	var validationErrors []ValidationError
 	for fieldName, fieldModel := range expectedFieldModels {
-		if !fieldModel.Requried {
+		if !fieldModel.Required {
 			continue
 		}
 
 		_, fieldExists := existingFields[fieldName]
 		if !fieldExists {
-			validationErrors = append(validationErrors, ValidationError{fieldName, ErrMissingRequiredField, nil})
+			validationErrors = append(validationErrors, ValidationError{fieldName, ErrMissingRequiredField, "", nil})
 		}
 	}
 	return validationErrors
