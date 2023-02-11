@@ -1,0 +1,17 @@
+{
+	"path": "/users/info",
+	"method": "GET",
+	"query_params": [
+		{
+			"name": "with_extra_data",
+			"value": false
+		}
+	],
+	"headers": [
+		{
+			"name": "Authorization",
+			"value": "Bearer 56ee9b7a-da8e-45a1-aade-a57761b912c4"
+		}
+	],
+	"body": []
+}

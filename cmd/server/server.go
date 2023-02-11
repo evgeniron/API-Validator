@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
-	"log"
 	"net/http"
 
 	"github.com/evgeniron/API-Validator/model"
@@ -22,6 +19,7 @@ type Server struct {
 func NewServer(db *store.Store) *Server {
 	s := &Server{}
 	s.db = db
+	s.router = mux.NewRouter()
 	s.Routes()
 
 	return s
@@ -82,18 +80,10 @@ func (s *Server) HandleModel() http.HandlerFunc {
 	}
 }
 
-type Response struct {
-	valid bool
-}
-
 func respond(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(data); err != nil {
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	w.WriteHeader(status)
-	if _, err := io.Copy(w, &buf); err != nil {
-		log.Println("respond:", &Response{true})
 	}
 }

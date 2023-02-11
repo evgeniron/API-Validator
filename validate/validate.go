@@ -15,8 +15,8 @@ const (
 )
 
 type Field struct {
-	Name  string
-	Value interface{}
+	Name  string      `json:"name"`
+	Value interface{} `json:"value"`
 }
 
 type Endpoint struct {
@@ -40,6 +40,7 @@ type ValidationReport struct {
 	QueryParams []ValidationError
 	Headers     []ValidationError
 	Body        []ValidationError
+	Valid       bool
 }
 
 func NewValidationReport() *ValidationReport {
@@ -91,10 +92,21 @@ func (vr *ValidationReport) WithBody(body []ValidationError) *ValidationReport {
 	return vr
 }
 
+func (vr *ValidationReport) IsValid() *ValidationReport {
+	if vr == nil {
+		return nil
+	}
+
+	if len(vr.QueryParams) == 0 && len(vr.Headers) == 0 && len(vr.Body) == 0 {
+		vr.Valid = true
+	}
+	return vr
+}
+
 func ParseEndpoint(r *http.Request) (*Endpoint, error) {
 	var endpoint Endpoint
 
-	err := utils.Decode(r, endpoint)
+	err := utils.Decode(r, &endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +120,7 @@ func ValidateReport(endpoint *Endpoint, model *model.EndpointModel) (*Validation
 		WithMethod(endpoint.Method).
 		WithQueryParams(validateFields(endpoint.QueryParams, model.QueryParams)).
 		WithHeaders(validateFields(endpoint.Headers, model.Headers)).
-		WithBody(validateFields(endpoint.Body, model.Body))
+		WithBody(validateFields(endpoint.Body, model.Body)).IsValid()
 
 	if validationReport == nil {
 		return nil, fmt.Errorf("failed to construct report")
@@ -172,5 +184,6 @@ func validateFields(inputFields []Field, expectedFieldModels map[string]model.Fi
 	}
 
 	validationErrors = append(validationErrors, validateRequiredFields(expectedFieldModels, existingFields)...)
+
 	return validationErrors
 }

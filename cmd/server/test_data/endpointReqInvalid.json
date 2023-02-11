@@ -1,0 +1,16 @@
+{
+	"path": "/users/info",
+	"method": "GET",
+	"query_params": [
+		{
+			"name": "with_extra_data",
+			"value": true
+		},
+		{
+			"name": "user_id",
+			"value": "d9b96787786b"
+		}
+	],
+	"headers": [],
+	"body": []
+}

@@ -4,7 +4,12 @@ import (
 	"net/http"
 )
 
+const (
+	modelRoute      = "/v1/model"
+	validationRoute = "/v1/validate"
+)
+
 func (s *Server) Routes() {
-	s.router.HandleFunc("/v1/model", s.HandleModel()).Methods(http.MethodPut)
-	s.router.HandleFunc("/v1/validate", s.ValidateEndpoint()).Methods(http.MethodPost)
+	s.router.HandleFunc(modelRoute, s.HandleModel()).Methods(http.MethodPut)
+	s.router.HandleFunc(validationRoute, s.ValidateEndpoint()).Methods(http.MethodPost)
 }
